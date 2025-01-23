@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Map with Pin Drop Functionality</title>
+    <style>
+        #map {
+            height: 550px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        var map;
+        var markers = [];
+        var webhookURL = '[YOURWEBHOOK]';
+
+        function initMap() {
+            var mapCenter = { lat: 44.682, lng: -79.250 };
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 14,
+                center: mapCenter,
+                mapTypeId: 'satellite'
+            });
+
+            map.addListener('click', function (event) {
+                addMarker(event.latLng);
+            });
+        }
+
+        function addMarker(location) {
+            clearMarkers();
+            var marker = new google.maps.Marker({
+                position: location,
+                map: map
+            });
+            markers.push(marker);
+
+            var infowindowContent = 'Latitude: ' + location.lat() + '<br>Longitude: ' + location.lng();
+            var infowindow = new google.maps.InfoWindow({
+                content: infowindowContent
+            });
+            infowindow.open(map, marker);
+
+            fetch(webhookURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ latitude: location.lat(), longitude: location.lng() })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Webhook triggered successfully:', data);
+                })
+                .catch(error => {
+                    console.error('There was a problem triggering the webhook:', error);
+                });
+
+            marker.addListener('click', function () {
+                infowindow.open(map, marker);
+            });
+        }
+
+        function clearMarkers() {
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArphrYz6SOfecninN0rVP5NS0unaArAlY&callback=initMap" async defer></script>
+</body>
+</html>

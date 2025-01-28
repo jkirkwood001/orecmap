@@ -19,7 +19,7 @@
         function initMap() {
             var mapCenter = { lat: 45.423, lng: -75.700 };
             map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 16,
+                zoom: 14,
                 center: mapCenter,
                 mapTypeId: 'satellite'
             });
@@ -48,7 +48,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ latitude: location.lat(), longitude: location.lng() })
+                body: JSON.stringify({ location: location.lat() + ';' + location.lng() })
             })
                 .then(response => {
                     if (!response.ok) {

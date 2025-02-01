@@ -48,7 +48,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ location: location.lat() + ';' + location.lng() })
+                coordinates: JSON.stringify({ location: location.lat() + ';' + location.lng() })
             })
                 .then(response => {
                     if (!response.ok) {

@@ -28,7 +28,6 @@
                 addMarker(event.latLng);
             });
         }
-
         function addMarker(location) {
             clearMarkers();
             var marker = new google.maps.Marker({
@@ -42,39 +41,23 @@
                 content: infowindowContent
             });
             infowindow.open(map, marker);
-
+            
             fetch(webhookURL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ coordinates: location.lat() + ',' + location.lng() }) // Ensure JSON format is correct
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Webhook triggered successfully:', data);
-            })
-            .catch(error => {
-                console.error('Error triggering webhook:', error);
-            });
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ coordinates: location.lat() + ',' + location.lng() }) // Ensure JSON format is correct
                 })
+                .then(response => response.json())
                 .then(data => {
                     console.log('Webhook triggered successfully:', data);
                 })
                 .catch(error => {
-                    console.error('There was a problem triggering the webhook:', error);
+                    console.error('Error triggering webhook:', error);
                 });
-
-            marker.addListener('click', function () {
-                infowindow.open(map, marker);
-            });
         }
-
+        
         function clearMarkers() {
             markers.forEach(marker => marker.setMap(null));
             markers = [];

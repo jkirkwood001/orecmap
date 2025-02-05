@@ -43,19 +43,18 @@
             infowindow.open(map, marker);
             
             fetch(webhookURL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ coordinates: location.lat() + ',' + location.lng() }) // Ensure JSON format is correct
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Webhook triggered successfully:', data);
-                })
-                .catch(error => {
-                    console.error('Error triggering webhook:', error);
-                });
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    coordinates: { lat: location.lat(), lng: location.lng() }  // Send as a structured object
+                }) 
+            })
+            .then(response => response.json())
+            .then(data => console.log('Webhook success:', data))
+            .catch(error => console.error('Webhook error:', error));
+
         }
         
         function clearMarkers() {

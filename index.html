@@ -43,18 +43,15 @@
             infowindow.open(map, marker);
             
             fetch(webhookURL, {
-                method: 'POST',
+                method: "POST",
+                mode: "no-cors",  // This avoids the CORS error
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ 
-                    coordinates: { lat: location.lat(), lng: location.lng() }  // Send as a structured object
-                }) 
+                body: JSON.stringify({ coordinates: { lat: location.lat(), lng: location.lng() } })
             })
-            .then(response => response.json())
-            .then(data => console.log('Webhook success:', data))
-            .catch(error => console.error('Webhook error:', error));
-
+            .then(response => console.log("Request sent, but no response due to no-cors"))
+            .catch(error => console.error("Error:", error));
         }
         
         function clearMarkers() {

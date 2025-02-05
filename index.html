@@ -48,8 +48,15 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ coordinates: location.lat() + ';' + location.lng() }) // Fix here
+                body: JSON.stringify({ coordinates: location.lat() + ',' + location.lng() }) // Ensure JSON format is correct
             })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Webhook triggered successfully:', data);
+            })
+            .catch(error => {
+                console.error('Error triggering webhook:', error);
+            });
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Network response was not ok');

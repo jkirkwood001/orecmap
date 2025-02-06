@@ -28,6 +28,7 @@
                 addMarker(event.latLng);
             });
         }
+        
         function addMarker(location) {
             clearMarkers();
             var marker = new google.maps.Marker({
@@ -35,15 +36,16 @@
                 map: map
             });
             markers.push(marker);
-
+        
             var infowindowContent = 'Latitude: ' + location.lat() + '<br>Longitude: ' + location.lng();
             var infowindow = new google.maps.InfoWindow({
                 content: infowindowContent
             });
             infowindow.open(map, marker);
-                        
+                            
             fetch(webhookURL, {
                 method: "POST",
+                mode: "no-cors", // Restoring no-cors mode
                 headers: {
                     "Content-Type": "application/json"
                 },
@@ -52,9 +54,9 @@
                     lng: location.lng() 
                 })
             })
-            .then(response => response.json()) // Try to parse response
-            .then(data => console.log("Success:", data))
+            .then(() => console.log("Request sent, but no response due to no-cors")) // Remove JSON parsing
             .catch(error => console.error("Error:", error));
+        }        
         
         function clearMarkers() {
             markers.forEach(marker => marker.setMap(null));

@@ -25,28 +25,35 @@
             // If valid coordinates are provided, use them; otherwise, return the default
             if (!isNaN(lat) && !isNaN(lng)) {
                 return { lat: lat, lng: lng };
-            }
-
             // Default coordinates (your hard-coded values)
             return { lat: 45.423, lng: -75.700 };
+        }
+
+        // Function to extract zoom from the URL or use default
+        function getZoomFromURL() {
+            const zoomParam = new URLSearchParams(window.location.search);
+            const zoom = parseFloat(urlParams.get("zoom"));
+
+            // If valid coordinates are provided, use them; otherwise, return the default
+            if (!isNaN(zoom)) {
+                return { zoom: zoom };
+            // Default coordinates (your hard-coded values)
+            return { zoom: 14 };
         }
 
         // Initialize the map
         function initMap() {
             var mapCenter = getCoordinatesFromURL();  // Use URL coordinates or default
+            var mapZoom = getZoomFromURL();  // Use URL zoom or default
             map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 17,  // Zoom level at which house numbers typically appear
-            center: mapCenter,
+            zoom: mapZoom,  // Zoom level at which house numbers typically appear
+            center: mapCenter,  // Coordinates for the centre of the map
             mapTypeId: 'satellite',  // Use "roadmap" for detailed street and address labels
             streetViewControl: true,  // Enable Street View for more exploration
             mapTypeControl: true,     // Allow switching map types
             tilt: 0,  // Ensures map stays flat (no tilt)
             styles: []  // Ensure no suppression of labels or features
-    
-            //    zoom: 14,
-            //    center: mapCenter,
-            //    mapTypeId: 'satellite'
-            });
+        });
 
             // Send the starting coordinates to the webhook
             fetch(webhookURL, {

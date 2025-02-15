@@ -37,10 +37,9 @@
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 14,
                 center: mapCenter,
-                mapTypeId: 'roadmap'
-                streetViewControl: true,  // Enable Street View for more detailed exploration
-                mapTypeControl: true,     // Allow users to switch map types if needed
-
+                mapTypeId: 'satellite'
+                // streetViewControl: true,  // Enable Street View for more detailed exploration
+                // mapTypeControl: true,     // Allow users to switch map types if needed
             });
 
             // Send the starting coordinates to the webhook

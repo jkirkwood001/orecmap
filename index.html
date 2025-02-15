@@ -43,14 +43,28 @@
             return 14;
         }
 
+        // Function to extract view from the URL or use default
+        function getViewTypeFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewType = parseFloat(urlParams.get("viewType"));
+
+            // If valid viewType is provided, use it; otherwise, return the default
+            if (!isNaN(viewType)) {
+                return viewType;
+            }
+            // Default mapTypeId level
+            return 'hybrid';
+        }
+
         // Initialize the map
         function initMap() {
             var mapCenter = getCoordinatesFromURL();  // Use URL coordinates or default
             var mapZoom = getZoomFromURL();  // Use URL zoom or default
+            var mapViewType = getViewTypeFromURL();  // Use URL zoom or default
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: mapZoom,
                 center: mapCenter,
-                mapTypeId: 'satellite',
+                mapTypeId: mapViewType,
                 streetViewControl: true,
                 mapTypeControl: true,
                 tilt: 0,
@@ -69,6 +83,7 @@
                     lng: mapCenter.lng
                 })
             })
+                
             .then(() => console.log("Starting coordinates sent to webhook"))
             .catch(error => console.error("Error sending starting coordinates:", error));
 

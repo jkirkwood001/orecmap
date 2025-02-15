@@ -14,21 +14,53 @@
     <script>
         var map;
         var markers = [];
-        var webhookURL = 'https://hooks.zapier.com/hooks/catch/2177604/2f5w5ol/';
+        var webhookURL = 'https://hooks.zapier.com/hooks/catch/2177604/2f5zrp6/';
 
+        // Function to extract latitude and longitude from the URL or use default
+        function getCoordinatesFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lat = parseFloat(urlParams.get("lat"));
+            const lng = parseFloat(urlParams.get("lng"));
+
+            // If valid coordinates are provided, use them; otherwise, return the default
+            if (!isNaN(lat) && !isNaN(lng)) {
+                return { lat: lat, lng: lng };
+            }
+
+            // Default coordinates (your hard-coded values)
+            return { lat: 45.423, lng: -75.700 };
+        }
+
+        // Initialize the map
         function initMap() {
-            var mapCenter = { lat: 45.423, lng: -75.700 };
+            var mapCenter = getCoordinatesFromURL();  // Use URL coordinates or default
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 14,
                 center: mapCenter,
                 mapTypeId: 'satellite'
             });
 
+            // Send the starting coordinates to the webhook
+            fetch(webhookURL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    lat: mapCenter.lat,
+                    lng: mapCenter.lng
+                })
+            })
+            .then(() => console.log("Starting coordinates sent to webhook"))
+            .catch(error => console.error("Error sending starting coordinates:", error));
+
             map.addListener('click', function (event) {
                 addMarker(event.latLng);
             });
         }
-        
+
+        // Add a marker to the map and send its coordinates
         function addMarker(location) {
             clearMarkers();
             var marker = new google.maps.Marker({
@@ -36,28 +68,30 @@
                 map: map
             });
             markers.push(marker);
-        
+
             var infowindowContent = 'Latitude: ' + location.lat() + '<br>Longitude: ' + location.lng();
             var infowindow = new google.maps.InfoWindow({
                 content: infowindowContent
             });
             infowindow.open(map, marker);
-                            
+
+            // Send the marker's coordinates to the webhook
             fetch(webhookURL, {
                 method: "POST",
-                mode: "no-cors", // Restoring no-cors mode
+                mode: "no-cors",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ 
-                    lat: location.lat(), 
-                    lng: location.lng() 
+                body: JSON.stringify({
+                    lat: location.lat(),
+                    lng: location.lng()
                 })
             })
-            .then(() => console.log("Request sent, but no response due to no-cors")) // Remove JSON parsing
-            .catch(error => console.error("Error:", error));
-        }        
-        
+            .then(() => console.log("Marker coordinates sent to webhook"))
+            .catch(error => console.error("Error sending marker coordinates:", error));
+        }
+
+        // Clear all markers from the map
         function clearMarkers() {
             markers.forEach(marker => marker.setMap(null));
             markers = [];

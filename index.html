@@ -1,61 +1,119 @@
-// Function to extract latitude and longitude from the URL or use default
-function getCoordinatesFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const lat = parseFloat(urlParams.get("lat"));
-    const lng = parseFloat(urlParams.get("lng"));
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Map with Pin Drop Functionality</title>
+    <style>
+        #map {
+            height: 550px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        var map;
+        var markers = [];
+        var webhookURL = 'https://hooks.zapier.com/hooks/catch/2177604/2f5w5ol/';
 
-    // If valid coordinates are provided, use them; otherwise, return the default
-    if (!isNaN(lat) && !isNaN(lng)) {
-        return { lat: lat, lng: lng };
-    }
-    // Default coordinates (your hard-coded values)
-    return { lat: 45.423, lng: -75.700 };
-}
+        // Function to extract latitude and longitude from the URL or use default
+        function getCoordinatesFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lat = parseFloat(urlParams.get("lat"));
+            const lng = parseFloat(urlParams.get("lng"));
 
-// Function to extract zoom from the URL or use default
-function getZoomFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const zoom = parseFloat(urlParams.get("zoom"));
+            // If valid coordinates are provided, use them; otherwise, return the default
+            if (!isNaN(lat) && !isNaN(lng)) {
+                return { lat: lat, lng: lng };
+            }
+            // Default coordinates (your hard-coded values)
+            return { lat: 45.423, lng: -75.700 };
+        }
 
-    // If valid zoom is provided, use it; otherwise, return the default
-    if (!isNaN(zoom)) {
-        return zoom;
-    }
-    // Default zoom level
-    return 14;
-}
+        // Function to extract zoom from the URL or use default
+        function getZoomFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const zoom = parseFloat(urlParams.get("zoom"));
 
-// Initialize the map
-function initMap() {
-    var mapCenter = getCoordinatesFromURL();  // Use URL coordinates or default
-    var mapZoom = getZoomFromURL();  // Use URL zoom or default
+            // If valid zoom is provided, use it; otherwise, return the default
+            if (!isNaN(zoom)) {
+                return zoom;
+            }
+            // Default zoom level
+            return 14;
+        }
 
-    map = new google.maps.Map(document.getElementById('map'), {
-        zoom: mapZoom,  // Correct zoom setting
-        center: mapCenter,  // Correctly set the map center
-        mapTypeId: 'satellite',  // Use "roadmap" for detailed street and address labels
-        streetViewControl: true,  // Enable Street View for more exploration
-        mapTypeControl: true,     // Allow switching map types
-        tilt: 0,  // Ensures map stays flat (no tilt)
-        styles: []  // Ensure no suppression of labels or features
-    });
+        // Initialize the map
+        function initMap() {
+            var mapCenter = getCoordinatesFromURL();  // Use URL coordinates or default
+            var mapZoom = getZoomFromURL();  // Use URL zoom or default
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: mapZoom,
+                center: mapCenter,
+                mapTypeId: 'satellite',
+                streetViewControl: true,
+                mapTypeControl: true,
+                tilt: 0,
+                styles: []
+            });
 
-    // Send the starting coordinates to the webhook
-    fetch(webhookURL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            lat: mapCenter.lat,
-            lng: mapCenter.lng
-        })
-    })
-    .then(() => console.log("Starting coordinates sent to webhook"))
-    .catch(error => console.error("Error sending starting coordinates:", error));
+            // Send the starting coordinates to the webhook
+            fetch(webhookURL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    lat: mapCenter.lat,
+                    lng: mapCenter.lng
+                })
+            })
+            .then(() => console.log("Starting coordinates sent to webhook"))
+            .catch(error => console.error("Error sending starting coordinates:", error));
 
-    map.addListener('click', function (event) {
-        addMarker(event.latLng);
-    });
-}
+            map.addListener('click', function (event) {
+                addMarker(event.latLng);
+            });
+        }
+
+        // Add a marker to the map and send its coordinates
+        function addMarker(location) {
+            clearMarkers();
+            var marker = new google.maps.Marker({
+                position: location,
+                map: map
+            });
+            markers.push(marker);
+
+            var infowindowContent = 'Latitude: ' + location.lat() + '<br>Longitude: ' + location.lng();
+            var infowindow = new google.maps.InfoWindow({
+                content: infowindowContent
+            });
+            infowindow.open(map, marker);
+
+            // Send the marker's coordinates to the webhook
+            fetch(webhookURL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    lat: location.lat(),
+                    lng: location.lng()
+                })
+            })
+            .then(() => console.log("Marker coordinates sent to webhook"))
+            .catch(error => console.error("Error sending marker coordinates:", error));
+        }
+
+        // Clear all markers from the map
+        function clearMarkers() {
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArphrYz6SOfecninN0rVP5NS0unaArAlY&callback=initMap" async defer></script>
+</body>
+</html>

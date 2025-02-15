@@ -4,7 +4,7 @@
     <title>Map with Pin Drop Functionality</title>
     <style>
         #map {
-            height: 1024px;
+            height: 550px;
             width: 100%;
         }
     </style>
@@ -37,7 +37,7 @@
             map = new google.maps.Map(document.getElementById('map'), {
             zoom: 17,  // Zoom level at which house numbers typically appear
             center: mapCenter,
-            mapTypeId: 'roadmap',  // Use "roadmap" for detailed street and address labels
+            mapTypeId: 'satellite',  // Use "roadmap" for detailed street and address labels
             streetViewControl: true,  // Enable Street View for more exploration
             mapTypeControl: true,     // Allow switching map types
             styles: []  // Ensure no suppression of labels or features

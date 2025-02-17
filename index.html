@@ -16,7 +16,6 @@
         var markers = [];
         var webhookURL = 'https://hooks.zapier.com/hooks/catch/2177604/2f5w5ol/';
 
-        // Extract latitude, longitude, and email from URL or use default
         function getCoordinatesFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
             const lat = parseFloat(urlParams.get("lat"));
@@ -26,7 +25,7 @@
 
         function getEmailFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get("userID"); // Assuming userID is the email
+            return urlParams.get("userID");
         }
 
         function getZoomFromURL() {
@@ -43,7 +42,6 @@
             return new URLSearchParams(window.location.search).get("showPin") === "true";
         }
 
-        // Initialize the map
         function initMap() {
             var mapCenter = getCoordinatesFromURL();
             var mapZoom = getZoomFromURL();
@@ -59,41 +57,35 @@
                 tilt: 0
             });
 
-            // Load pins from Google Sheets Web App
-            loadPinsFromSheet();
+            loadPinsFromSheet(map);
 
-            // Add initial pin if showPin=true
             if (showPin) {
-                addMarkerWithoutPost(mapCenter);
+                addMarkerWithoutPost(mapCenter, null, map); // Pass map here
             }
 
-            // Add marker on map click
             map.addListener('click', function (event) {
                 addMarker(event.latLng, isReadOnly);
             });
         }
 
-        function addMarkerWithoutPost(location, address) {
-            clearMarkers();
+        function addMarkerWithoutPost(location, address, map) { // Add map parameter
+            //clearMarkers();  // No need to clear for initial load
             console.log('Adding marker at:', location, 'Address:', address);
-        
-            // Create marker
+
             var marker = new google.maps.Marker({
                 position: location,
-                map: map,  // Ensure map is correctly passed
-                title: address  // Optional: Adds a tooltip for the marker
+                map: map,
+                title: address
             });
-        
+
             markers.push(marker);
-        
-            // Create an info window
+
             var infowindow = new google.maps.InfoWindow({
                 content: `<strong>${address}</strong><br>Lat: ${location.lat}<br>Lng: ${location.lng}`
             });
             infowindow.open(map, marker);
         }
 
-        // Add marker AND post data if not read-only
         function addMarker(location, isReadOnly) {
             clearMarkers();
             var marker = new google.maps.Marker({ position: location, map: map });
@@ -113,7 +105,6 @@
             });
         }
 
-        // Reverse Geocode: Get Address from Coordinates
         function getAddressFromCoordinates(location, callback) {
             var geocoder = new google.maps.Geocoder();
             geocoder.geocode({ location: location }, function (results, status) {
@@ -125,17 +116,16 @@
             });
         }
 
-        // Fetch the pins from your Google Sheets Web App
-        function loadPinsFromSheet() {
-            var sheetURL = "https://script.google.com/macros/s/AKfycbx87euepoIJU8AG62deU6j9GM330m5yY6VH5bP791cEKUUjc6D2v7ms2HfzawsfVKt_/exec"; // Replace with your web app URL
+        function loadPinsFromSheet(map) {  // Accept map as argument
+            var sheetURL = "https://script.google.com/macros/s/AKfycbx87euepoIJU8AG62deU6j9GM330m5yY6VH5bP791cEKUUjc6D2v7ms2HfzawsfVKt_/exec";
             fetch(sheetURL)
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Pins data received:", data); // Log the response data
+                    console.log("Pins data received:", data);
                     if (data && data.length > 0) {
                         data.forEach(function(pin) {
                             console.log(`Adding pin: ${pin.address}, Lat: ${pin.lat}, Lng: ${pin.lng}`);
-                            addMarkerWithoutPost({ lat: pin.lat, lng: pin.lng }, pin.address);
+                            addMarkerWithoutPost({ lat: pin.lat, lng: pin.lng }, pin.address, map); // Pass map
                         });
                     } else {
                         console.log("No pins found in the data.");
@@ -146,31 +136,29 @@
                 });
         }
 
-        // Send data to webhook
         function sendToWebhook(lat, lng, address) {
-            const email = getEmailFromURL();  // Get email from URL
-            let encodedAddress = encodeURIComponent(address); // Encode special characters
+            const email = getEmailFromURL();
+            let encodedAddress = encodeURIComponent(address);
             fetch(webhookURL, {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    address: encodedAddress, 
-                    lat: lat, 
+                body: JSON.stringify({
+                    address: encodedAddress,
+                    lat: lat,
                     lng: lng,
-                    email: email // Add email field
+                    email: email
                 })
             })
             .then(() => console.log("Marker data sent to webhook:", { encodedAddress, lat, lng, email }))
             .catch(error => console.error("Error sending marker data:", error));
         }
 
-        // Clear all markers
         function clearMarkers() {
             markers.forEach(marker => marker.setMap(null));
             markers = [];
         }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArphrYz6SOfecninN0rVP5NS0unaArAlY&callback=initMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
 </body>
 </html>

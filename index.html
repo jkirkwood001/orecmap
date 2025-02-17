@@ -60,7 +60,7 @@
             loadPinsFromSheet(map);
 
             if (showPin) {
-                addMarkerWithoutPost(mapCenter, null, map); // Pass map here
+                addMarkerWithoutPost(mapCenter, null, map);
             }
 
             map.addListener('click', function (event) {
@@ -68,22 +68,22 @@
             });
         }
 
-        function addMarkerWithoutPost(location, address, map) { // Add map parameter
-            //clearMarkers();  // No need to clear for initial load
-            console.log('Adding marker at:', location, 'Address:', address);
-
+        function addMarkerWithoutPost(location, address, map) {
             var marker = new google.maps.Marker({
                 position: location,
                 map: map,
                 title: address
             });
-
             markers.push(marker);
 
-            var infowindow = new google.maps.InfoWindow({
+            marker.infowindow = new google.maps.InfoWindow({
                 content: `<strong>${address}</strong><br>Lat: ${location.lat}<br>Lng: ${location.lng}`
             });
-            infowindow.open(map, marker);
+
+            marker.addListener('click', function() {
+                markers.forEach(m => { if (m.infowindow) m.infowindow.close(); });
+                marker.infowindow.open(map, marker);
+            });
         }
 
         function addMarker(location, isReadOnly) {
@@ -91,18 +91,21 @@
             var marker = new google.maps.Marker({ position: location, map: map });
             markers.push(marker);
 
-            var infowindow = new google.maps.InfoWindow({ content: 'Fetching address...' });
-            infowindow.open(map, marker);
+            marker.infowindow = new google.maps.InfoWindow({ content: 'Fetching address...' });
 
             getAddressFromCoordinates(location, function (address) {
                 var infoContent = `<strong>${address}</strong><br>Latitude: ${location.lat()}<br>Longitude: ${location.lng()}`;
-                infowindow.setContent(infoContent);
-                console.log(`Address: ${address}, Lat: ${location.lat()}, Lng: ${location.lng()}`);
-
-                if (!isReadOnly) {
-                    sendToWebhook(location.lat(), location.lng(), address);
-                }
+                marker.infowindow.setContent(infoContent);
             });
+
+            marker.addListener('click', function() {
+                markers.forEach(m => { if (m.infowindow) m.infowindow.close(); });
+                marker.infowindow.open(map, marker);
+            });
+
+            if (!isReadOnly) {
+                sendToWebhook(location.lat(), location.lng(), address);
+            }
         }
 
         function getAddressFromCoordinates(location, callback) {
@@ -116,19 +119,23 @@
             });
         }
 
-        function loadPinsFromSheet(map) {  // Accept map as argument
+        function loadPinsFromSheet(map) {
             var sheetURL = "https://script.google.com/macros/s/AKfycbx87euepoIJU8AG62deU6j9GM330m5yY6VH5bP791cEKUUjc6D2v7ms2HfzawsfVKt_/exec";
             fetch(sheetURL)
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Pins data received:", data);
                     if (data && data.length > 0) {
                         data.forEach(function(pin) {
-                            console.log(`Adding pin: ${pin.address}, Lat: ${pin.lat}, Lng: ${pin.lng}`);
-                            addMarkerWithoutPost({ lat: pin.lat, lng: pin.lng }, pin.address, map); // Pass map
+                            const lat = Number(pin.lat);
+                            const lng = Number(pin.lng);
+
+                            if (isNaN(lat) || isNaN(lng)) {
+                                console.error("Invalid latitude or longitude:", pin);
+                                return;
+                            }
+
+                            addMarkerWithoutPost({ lat: lat, lng: lng }, pin.address, map);
                         });
-                    } else {
-                        console.log("No pins found in the data.");
                     }
                 })
                 .catch(error => {
@@ -150,7 +157,6 @@
                     email: email
                 })
             })
-            .then(() => console.log("Marker data sent to webhook:", { encodedAddress, lat, lng, email }))
             .catch(error => console.error("Error sending marker data:", error));
         }
 
@@ -159,6 +165,6 @@
             markers = [];
         }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArphrYz6SOfecninN0rVP5NS0unaArAlY&callback=initMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
 </body>
 </html>

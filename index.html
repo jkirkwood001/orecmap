@@ -123,15 +123,23 @@
 
         // Fetch the pins from your Google Sheets Web App
         function loadPinsFromSheet() {
-            var sheetURL = "https://script.google.com/macros/s/AKfycbx87euepoIJU8AG62deU6j9GM330m5yY6VH5bP791cEKUUjc6D2v7ms2HfzawsfVKt_/exec"; // Replace with your web app URL
+            var sheetURL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL"; // Replace with your web app URL
             fetch(sheetURL)
                 .then(response => response.json())
                 .then(data => {
-                    data.forEach(function(pin) {
-                        addMarkerWithoutPost({lat: pin.lat, lng: pin.lng}, pin.address);
-                    });
+                    console.log("Pins data received:", data); // Log the response data
+                    if (data && data.length > 0) {
+                        data.forEach(function(pin) {
+                            console.log(`Adding pin: ${pin.address}, Lat: ${pin.lat}, Lng: ${pin.lng}`);
+                            addMarkerWithoutPost({ lat: pin.lat, lng: pin.lng }, pin.address);
+                        });
+                    } else {
+                        console.log("No pins found in the data.");
+                    }
                 })
-                .catch(error => console.error('Error fetching pins:', error));
+                .catch(error => {
+                    console.error('Error fetching pins:', error);
+                });
         }
 
         // Send data to webhook

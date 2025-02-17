@@ -85,14 +85,26 @@
                 map: map
             });
             markers.push(marker);
-
-            var infowindowContent = 'Latitude: ' + location.lat + '<br>Longitude: ' + location.lng;
+        
+            // Initialize info window
             var infowindow = new google.maps.InfoWindow({
-                content: infowindowContent
+                content: 'Fetching address...'
             });
             infowindow.open(map, marker);
+        
+            // Get address from coordinates
+            var geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ location: location }, function (results, status) {
+                if (status === 'OK' && results[0]) {
+                    var address = results[0].formatted_address;
+                    var infowindowContent = `Latitude: ${location.lat} <br>Longitude: ${location.lng} <br>Address: ${address}`;
+                    infowindow.setContent(infowindowContent);
+                } else {
+                    infowindow.setContent(`Latitude: ${location.lat} <br>Longitude: ${location.lng} <br>Address not found`);
+                }
+            });
         }
-
+        
         // Add a marker to the map and send its coordinates (only if not read-only)
         function addMarker(location, isReadOnly) {
             clearMarkers();

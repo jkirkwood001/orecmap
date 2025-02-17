@@ -16,7 +16,7 @@
         var markers = [];
         var webhookURL = 'https://hooks.zapier.com/hooks/catch/2177604/2f5w5ol/';
 
-        // Extract latitude and longitude from URL or use default
+        // Extract latitude, longitude, and email from URL or use default
         function getCoordinatesFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
             const lat = parseFloat(urlParams.get("lat"));
@@ -24,19 +24,21 @@
             return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : { lat: 45.423, lng: -75.700 };
         }
 
-        // Extract zoom level from URL or use default
+        function getEmailFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get("userID"); // Assuming userID is the email
+        }
+
         function getZoomFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
             const zoom = parseFloat(urlParams.get("zoom"));
             return !isNaN(zoom) ? zoom : 14;
         }
 
-        // Extract readOnly flag from URL
         function getReadOnlyFromURL() {
             return new URLSearchParams(window.location.search).get("readOnly") === "true";
         }
 
-        // Check if the initial pin should be displayed
         function shouldShowPin() {
             return new URLSearchParams(window.location.search).get("showPin") === "true";
         }
@@ -118,14 +120,20 @@
 
         // Send data to webhook
         function sendToWebhook(lat, lng, address) {
+            const email = getEmailFromURL();  // Get email from URL
             let encodedAddress = encodeURIComponent(address); // Encode special characters
             fetch(webhookURL, {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ address, lat, lng })
+                body: JSON.stringify({ 
+                    address: encodedAddress, 
+                    lat: lat, 
+                    lng: lng,
+                    email: email // Add email field
+                })
             })
-            .then(() => console.log("Marker data sent to webhook:", { address, lat, lng }))
+            .then(() => console.log("Marker data sent to webhook:", { encodedAddress, lat, lng, email }))
             .catch(error => console.error("Error sending marker data:", error));
         }
 

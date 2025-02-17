@@ -26,7 +26,7 @@
             if (!isNaN(lat) && !isNaN(lng)) {
                 return { lat: lat, lng: lng };
             }
-            // Default coordinates (your hard-coded values)
+            // Default coordinates
             return { lat: 45.423, lng: -75.700 };
         }
 
@@ -39,15 +39,23 @@
             if (!isNaN(zoom)) {
                 return zoom;
             }
-            // Default zoom level
-            return 14;
+            return 14;  // Default zoom level
         }
 
         // Function to extract user ID from the URL or return null if not provided
         function getUserIDfromURL() {
             const urlParams = new URLSearchParams(window.location.search);
-            const userID = urlParams.get("userID");  // No need for parseFloat here
+            const userID = urlParams.get("userID");
             return userID ? userID : null;  // Return null if no user ID is found
+        }
+
+        // Function to extract the readOnly flag from the URL
+        function getReadOnlyFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const readOnly = urlParams.get("readOnly");
+
+            // If "readOnly" is "true", return true; otherwise, return false
+            return readOnly === "true";
         }
 
         // Initialize the map
@@ -55,40 +63,43 @@
             var mapCenter = getCoordinatesFromURL();  // Use URL coordinates or default
             var mapZoom = getZoomFromURL();  // Use URL zoom or default
             var mapUserID = getUserIDfromURL();  // Get the user ID from the URL
+            var isReadOnly = getReadOnlyFromURL();  // Check if the map should be read-only
 
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: mapZoom,
                 center: mapCenter,
-                mapTypeId: 'hybrid',  // Hybrid view with labels
+                mapTypeId: 'hybrid',
                 streetViewControl: true,
                 mapTypeControl: true,
                 tilt: 0,
                 styles: []
             });
 
-            // Send the starting coordinates and user ID to the webhook
-            fetch(webhookURL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    lat: mapCenter.lat,
-                    lng: mapCenter.lng,
-                    userID: mapUserID  // Include userID in the payload
+            // Only send starting coordinates if the map is not read-only
+            if (!isReadOnly) {
+                fetch(webhookURL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        lat: mapCenter.lat,
+                        lng: mapCenter.lng,
+                        userID: mapUserID
+                    })
                 })
-            })
-            .then(() => console.log("Starting coordinates sent to webhook"))
-            .catch(error => console.error("Error sending starting coordinates:", error));
+                .then(() => console.log("Starting coordinates sent to webhook"))
+                .catch(error => console.error("Error sending starting coordinates:", error));
+            }
 
             map.addListener('click', function (event) {
-                addMarker(event.latLng, mapUserID);
+                addMarker(event.latLng, mapUserID, isReadOnly);
             });
         }
 
-        // Add a marker to the map and send its coordinates along with the user ID
-        function addMarker(location, userID) {
+        // Add a marker to the map and send its coordinates (only if not read-only)
+        function addMarker(location, userID, isReadOnly) {
             clearMarkers();
             var marker = new google.maps.Marker({
                 position: location,
@@ -102,21 +113,23 @@
             });
             infowindow.open(map, marker);
 
-            // Send the marker's coordinates and user ID to the webhook
-            fetch(webhookURL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    lat: location.lat(),
-                    lng: location.lng(),
-                    userID: userID  // Include userID in the payload
+            // Only send marker coordinates if the map is not read-only
+            if (!isReadOnly) {
+                fetch(webhookURL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        lat: location.lat(),
+                        lng: location.lng(),
+                        userID: userID
+                    })
                 })
-            })
-            .then(() => console.log("Marker coordinates sent to webhook"))
-            .catch(error => console.error("Error sending marker coordinates:", error));
+                .then(() => console.log("Marker coordinates sent to webhook"))
+                .catch(error => console.error("Error sending marker coordinates:", error));
+            }
         }
 
         // Clear all markers from the map

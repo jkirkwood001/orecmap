@@ -34,36 +34,27 @@
         function getZoomFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
             const zoom = parseFloat(urlParams.get("zoom"));
-
-            // If valid zoom is provided, use it; otherwise, return the default
-            if (!isNaN(zoom)) {
-                return zoom;
-            }
-            return 14;  // Default zoom level
-        }
-
-        // Function to extract user ID from the URL or return null if not provided
-        function getUserIDfromURL() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const userID = urlParams.get("userID");
-            return userID ? userID : null;  // Return null if no user ID is found
+            return !isNaN(zoom) ? zoom : 14;  // Default zoom level
         }
 
         // Function to extract the readOnly flag from the URL
         function getReadOnlyFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
-            const readOnly = urlParams.get("readOnly");
+            return urlParams.get("readOnly") === "true";
+        }
 
-            // If "readOnly" is "true", return true; otherwise, return false
-            return readOnly === "true";
+        // Function to check if the initial pin should be displayed
+        function shouldShowPin() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get("showPin") === "true";
         }
 
         // Initialize the map
         function initMap() {
             var mapCenter = getCoordinatesFromURL();  // Use URL coordinates or default
             var mapZoom = getZoomFromURL();  // Use URL zoom or default
-            var mapUserID = getUserIDfromURL();  // Get the user ID from the URL
             var isReadOnly = getReadOnlyFromURL();  // Check if the map should be read-only
+            var showPin = shouldShowPin();  // Check if the initial pin should be displayed
 
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: mapZoom,
@@ -75,31 +66,18 @@
                 styles: []
             });
 
-            // Only send starting coordinates if the map is not read-only
-            if (!isReadOnly) {
-                fetch(webhookURL, {
-                    method: "POST",
-                    mode: "no-cors",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        lat: mapCenter.lat,
-                        lng: mapCenter.lng,
-                        userID: mapUserID
-                    })
-                })
-                .then(() => console.log("Starting coordinates sent to webhook"))
-                .catch(error => console.error("Error sending starting coordinates:", error));
+            // Add a pin at the initial location if showPin=true
+            if (showPin) {
+                addMarker(mapCenter, isReadOnly);
             }
 
             map.addListener('click', function (event) {
-                addMarker(event.latLng, mapUserID, isReadOnly);
+                addMarker(event.latLng, isReadOnly);
             });
         }
 
-        // Add a marker to the map and send its coordinates (only if not read-only)
-        function addMarker(location, userID, isReadOnly) {
+        // Add a marker to the map
+        function addMarker(location, isReadOnly) {
             clearMarkers();
             var marker = new google.maps.Marker({
                 position: location,
@@ -107,7 +85,7 @@
             });
             markers.push(marker);
 
-            var infowindowContent = 'Latitude: ' + location.lat() + '<br>Longitude: ' + location.lng();
+            var infowindowContent = 'Latitude: ' + location.lat + '<br>Longitude: ' + location.lng;
             var infowindow = new google.maps.InfoWindow({
                 content: infowindowContent
             });
@@ -122,13 +100,14 @@
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        lat: location.lat(),
-                        lng: location.lng(),
-                        userID: userID
+                        lat: location.lat,
+                        lng: location.lng
                     })
                 })
                 .then(() => console.log("Marker coordinates sent to webhook"))
                 .catch(error => console.error("Error sending marker coordinates:", error));
+            } else {
+                console.log("Map is in read-only mode. Marker added but not sent to webhook.");
             }
         }
 

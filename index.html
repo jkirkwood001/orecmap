@@ -43,35 +43,30 @@
             return 14;
         }
 
-        // Function to extract view from the URL or use default
-        function getViewTypeFromURL() {
+        // Function to extract user ID from the URL or return null if not provided
+        function getUserIDfromURL() {
             const urlParams = new URLSearchParams(window.location.search);
-            const viewType = parseFloat(urlParams.get("viewType"));
-
-            // If valid viewType is provided, use it; otherwise, return the default
-            if (!isNaN(viewType)) {
-                return viewType;
-            }
-            // Default mapTypeId level
-            return 'hybrid';
+            const userID = urlParams.get("userID");  // No need for parseFloat here
+            return userID ? userID : null;  // Return null if no user ID is found
         }
 
         // Initialize the map
         function initMap() {
             var mapCenter = getCoordinatesFromURL();  // Use URL coordinates or default
             var mapZoom = getZoomFromURL();  // Use URL zoom or default
-            var mapViewType = getViewTypeFromURL();  // Use URL zoom or default
+            var mapUserID = getUserIDfromURL();  // Get the user ID from the URL
+
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: mapZoom,
                 center: mapCenter,
-                mapTypeId: mapViewType,
+                mapTypeId: 'hybrid',  // Hybrid view with labels
                 streetViewControl: true,
                 mapTypeControl: true,
                 tilt: 0,
                 styles: []
             });
 
-            // Send the starting coordinates to the webhook
+            // Send the starting coordinates and user ID to the webhook
             fetch(webhookURL, {
                 method: "POST",
                 mode: "no-cors",
@@ -80,20 +75,20 @@
                 },
                 body: JSON.stringify({
                     lat: mapCenter.lat,
-                    lng: mapCenter.lng
+                    lng: mapCenter.lng,
+                    userID: mapUserID  // Include userID in the payload
                 })
             })
-                
             .then(() => console.log("Starting coordinates sent to webhook"))
             .catch(error => console.error("Error sending starting coordinates:", error));
 
             map.addListener('click', function (event) {
-                addMarker(event.latLng);
+                addMarker(event.latLng, mapUserID);
             });
         }
 
-        // Add a marker to the map and send its coordinates
-        function addMarker(location) {
+        // Add a marker to the map and send its coordinates along with the user ID
+        function addMarker(location, userID) {
             clearMarkers();
             var marker = new google.maps.Marker({
                 position: location,
@@ -107,7 +102,7 @@
             });
             infowindow.open(map, marker);
 
-            // Send the marker's coordinates to the webhook
+            // Send the marker's coordinates and user ID to the webhook
             fetch(webhookURL, {
                 method: "POST",
                 mode: "no-cors",
@@ -116,7 +111,8 @@
                 },
                 body: JSON.stringify({
                     lat: location.lat(),
-                    lng: location.lng()
+                    lng: location.lng(),
+                    userID: userID  // Include userID in the payload
                 })
             })
             .then(() => console.log("Marker coordinates sent to webhook"))

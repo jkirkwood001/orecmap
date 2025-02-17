@@ -59,6 +59,9 @@
                 tilt: 0
             });
 
+            // Load pins from Google Sheets Web App
+            loadPinsFromSheet();
+
             // Add initial pin if showPin=true
             if (showPin) {
                 addMarkerWithoutPost(mapCenter);
@@ -116,6 +119,19 @@
                     callback("Address not found");
                 }
             });
+        }
+
+        // Fetch the pins from your Google Sheets Web App
+        function loadPinsFromSheet() {
+            var sheetURL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL"; // Replace with your web app URL
+            fetch(sheetURL)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(function(pin) {
+                        addMarkerWithoutPost({lat: pin.lat, lng: pin.lng}, pin.address);
+                    });
+                })
+                .catch(error => console.error('Error fetching pins:', error));
         }
 
         // Send data to webhook

@@ -73,20 +73,24 @@
             });
         }
 
-        // Add marker WITHOUT posting data
-        function addMarkerWithoutPost(location) {
+        function addMarkerWithoutPost(location, address) {
             clearMarkers();
-            var marker = new google.maps.Marker({ position: location, map: map });
-            markers.push(marker);
-
-            var infowindow = new google.maps.InfoWindow({ content: 'Fetching address...' });
-            infowindow.open(map, marker);
-
-            getAddressFromCoordinates(location, function (address) {
-                var infoContent = `<strong>${address}</strong><br>Latitude: ${location.lat}<br>Longitude: ${location.lng}`;
-                infowindow.setContent(infoContent);
-                console.log(`Address: ${address}, Lat: ${location.lat}, Lng: ${location.lng}`);
+            console.log('Adding marker at:', location, 'Address:', address);
+        
+            // Create marker
+            var marker = new google.maps.Marker({
+                position: location,
+                map: map,  // Ensure map is correctly passed
+                title: address  // Optional: Adds a tooltip for the marker
             });
+        
+            markers.push(marker);
+        
+            // Create an info window
+            var infowindow = new google.maps.InfoWindow({
+                content: `<strong>${address}</strong><br>Lat: ${location.lat}<br>Lng: ${location.lng}`
+            });
+            infowindow.open(map, marker);
         }
 
         // Add marker AND post data if not read-only

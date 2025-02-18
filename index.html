@@ -60,15 +60,15 @@
             loadPinsFromSheet(map);
 
             if (showPin) {
-                addMarkerWithoutPost(mapCenter, null, map);
+                addMarkerWithoutPost(mapCenter, null, map, true); // Open info window for initial pin
             }
 
             map.addListener('click', function (event) {
-                addNewMarker(event.latLng, isReadOnly); // Call addNewMarker
+                addNewMarker(event.latLng, isReadOnly);
             });
         }
 
-        function addMarkerWithoutPost(location, address, map) {
+        function addMarkerWithoutPost(location, address, map, openInfoWindow = false) {
             var marker = new google.maps.Marker({
                 position: location,
                 map: map,
@@ -84,9 +84,13 @@
                 markers.forEach(m => { if (m.infowindow) m.infowindow.close(); });
                 marker.infowindow.open(map, marker);
             });
+
+            if (openInfoWindow) {
+                marker.infowindow.open(map, marker);
+            }
         }
 
-        function addNewMarker(location, isReadOnly) { // New function name
+        function addNewMarker(location, isReadOnly) {
             clearMarkers();
             var marker = new google.maps.Marker({ position: location, map: map });
             markers.push(marker);

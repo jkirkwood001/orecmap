@@ -68,22 +68,30 @@
             });
         }
 
-        function addMarkerWithoutPost(location, address, map) {
-            var marker = new google.maps.Marker({
-                position: location,
-                map: map,
-                title: address
-            });
+        function addMarker(location, isReadOnly) {
+            clearMarkers();
+            var marker = new google.maps.Marker({ position: location, map: map });
             markers.push(marker);
-
-            marker.infowindow = new google.maps.InfoWindow({
-                content: `<strong>${address}</strong><br>Lat: ${location.lat}<br>Lng: ${location.lng}`
-            });
-
-            marker.addListener('click', function() {
-                markers.forEach(m => { if (m.infowindow) m.infowindow.close(); });
-                marker.infowindow.open(map, marker);
-            });
+        
+            var infowindow = new google.maps.InfoWindow({ content: 'Fetching address...' });
+            infowindow.open(map, marker);
+        
+            getAddressFromCoordinates(location, function (address) {  // Callback function
+                var infoContent = `<strong>${address}</strong><br>Latitude: ${location.lat()}<br>Longitude: ${location.lng()}`;
+                infowindow.setContent(infoContent);
+                console.log(`Address: ${address}, Lat: ${location.lat()}, Lng: ${location.lng()}`);
+        
+                marker.infowindow = new google.maps.InfoWindow({content: infoContent}); // Store infowindow
+        
+                marker.addListener('click', function() {
+                    markers.forEach(m => { if (m.infowindow) m.infowindow.close(); });
+                    marker.infowindow.open(map, marker);
+                });
+        
+                if (!isReadOnly) {
+                    sendToWebhook(location.lat(), location.lng(), address); // Call sendToWebhook here
+                }
+            }); // End of getAddressFromCoordinates callback
         }
 
         function addMarker(location, isReadOnly) {

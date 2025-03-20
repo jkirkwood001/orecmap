@@ -24,13 +24,11 @@
         }
 
         function getEmailFromURL() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get("userID");
+            return new URLSearchParams(window.location.search).get("userID");
         }
 
         function getZoomFromURL() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const zoom = parseFloat(urlParams.get("zoom"));
+            const zoom = parseFloat(new URLSearchParams(window.location.search).get("zoom"));
             return !isNaN(zoom) ? zoom : 14;
         }
 
@@ -42,11 +40,16 @@
             return new URLSearchParams(window.location.search).get("showPin") === "true";
         }
 
+        function getPinLabelFromURL() {
+            return new URLSearchParams(window.location.search).get("pinlabel");
+        }
+
         function initMap() {
             var mapCenter = getCoordinatesFromURL();
             var mapZoom = getZoomFromURL();
             var isReadOnly = getReadOnlyFromURL();
             var showPin = shouldShowPin();
+            var pinLabel = getPinLabelFromURL();
 
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: mapZoom,
@@ -60,7 +63,13 @@
             loadPinsFromSheet(map);
 
             if (showPin) {
-                addMarkerWithoutPost(mapCenter, null, map, true); // Open info window for initial pin
+                if (pinLabel) {
+                    addMarkerWithoutPost(mapCenter, pinLabel, map, true);
+                } else {
+                    getAddressFromCoordinates(mapCenter, function (address) {
+                        addMarkerWithoutPost(mapCenter, address, map, true);
+                    });
+                }
             }
 
             map.addListener('click', function (event) {
@@ -68,16 +77,17 @@
             });
         }
 
-        function addMarkerWithoutPost(location, address, map, openInfoWindow = false) {
+        function addMarkerWithoutPost(location, label, map, openInfoWindow = false) {
             var marker = new google.maps.Marker({
                 position: location,
                 map: map,
-                title: address
+                title: label || "" // If label is null, use an empty string
             });
+
             markers.push(marker);
 
             marker.infowindow = new google.maps.InfoWindow({
-                content: `<strong>${address}</strong><br>Lat: ${location.lat}<br>Lng: ${location.lng}`
+                content: `<strong>${label || "No Label"}</strong><br>Lat: ${location.lat}<br>Lng: ${location.lng}`
             });
 
             marker.addListener('click', function() {
@@ -118,7 +128,7 @@
                 if (status === 'OK' && results[0]) {
                     callback(results[0].formatted_address);
                 } else {
-                    callback("Address not found");
+                    callback("Unknown Address");
                 }
             });
         }
@@ -138,7 +148,7 @@
                                 return;
                             }
 
-                            addMarkerWithoutPost({ lat: lat, lng: lng }, pin.address, map);
+                            addMarkerWithoutPost({ lat: lat, lng: lng }, pin.address || "", map);
                         });
                     }
                 })
@@ -147,18 +157,21 @@
                 });
         }
 
-        function sendToWebhook(lat, lng, address) {
+        function sendToWebhook(lat, lng, label) {
             const email = getEmailFromURL();
-            let encodedAddress = encodeURIComponent(address);
+            const pageURL = window.location.href; // Get the full URL
+            let encodedLabel = encodeURIComponent(label);
+
             fetch(webhookURL, {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    address: encodedAddress,
+                    pinlabel: encodedLabel,
                     lat: lat,
                     lng: lng,
-                    email: email
+                    email: email,
+                    url: pageURL // Include the URL in the webhook request
                 })
             })
             .catch(error => console.error("Error sending marker data:", error));

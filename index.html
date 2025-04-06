@@ -2,23 +2,8 @@
 <html>
   <head>
     <title>Map Integration</title>
-    <!-- Updated Google Maps script with loading=async -->
-    <script
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCVTKDaMKijXNaqf2PbL0USscRNCox2AfQ&callback=initMap&loading=async"
-      async
-    ></script>
-    <!-- Updated MarkerClusterer script -->
-    <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
-    <style>
-      #map {
-        height: 100vh;
-        width: 100%;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="map"></div>
 
+    <!-- Your script defining initMap comes first -->
     <script>
       function getZoomFromURL() {
         const params = new URLSearchParams(window.location.search);
@@ -52,7 +37,7 @@
       const SHEET_URL = "https://opensheet.elk.sh/1S3ozfJcm3Ok8oyC5IXsXKOU6a1yIG4mwV3YwIRqnK-4/100_Addresses";
       const ZAP_URL = "https://hooks.zapier.com/hooks/catch/15857292/3z9s1mf/";
 
-      // ✅ Ensure initMap is globally accessible
+      // ✅ Must be globally defined before Maps API loads
       window.initMap = async function () {
         map = new google.maps.Map(document.getElementById("map"), {
           center: { lat: getLatFromURL(), lng: getLngFromURL() },
@@ -83,7 +68,6 @@
           return marker;
         });
 
-        // ✅ Use updated marker clusterer
         new markerClusterer.MarkerClusterer({ map, markers });
 
         if (!isReadOnlyFromURL()) {
@@ -112,5 +96,25 @@
         }
       };
     </script>
+
+    <!-- ✅ Load the new MarkerClusterer after initMap is defined -->
+    <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+
+    <!-- ✅ Load Maps API *after* initMap is defined -->
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCVTKDaMKijXNaqf2PbL0USscRNCox2AfQ&callback=initMap&loading=async"
+      async
+    ></script>
+
+    <style>
+      #map {
+        height: 100vh;
+        width: 100%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
   </body>
 </html>

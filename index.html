@@ -1,120 +1,187 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Custom Google Map with Marker Clustering</title>
-
-    <script>
-      // Replace with your deployed Apps Script endpoint
-      const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbx87euepoIJU8AG62deU6j9GM330m5yY6VH5bP791cEKUUjc6D2v7ms2HfzawsfVKt_/exec";
-
-      function getZoomFromURL() {
-        const params = new URLSearchParams(window.location.search);
-        return parseInt(params.get("zoom")) || 10;
-      }
-
-      function getLatFromURL() {
-        const params = new URLSearchParams(window.location.search);
-        return parseFloat(params.get("lat")) || 45.4215;
-      }
-
-      function getLngFromURL() {
-        const params = new URLSearchParams(window.location.search);
-        return parseFloat(params.get("lng")) || -75.6993;
-      }
-
-      function getEmailFromURL() {
-        const params = new URLSearchParams(window.location.search);
-        return params.get("email") || "";
-      }
-
-      function isReadOnlyFromURL() {
-        const params = new URLSearchParams(window.location.search);
-        return params.get("readonly") === "true";
-      }
-
-      let map;
-      let infoWindow;
-      let userMarker;
-
-      window.initMap = async function () {
-        map = new google.maps.Map(document.getElementById("map"), {
-          center: { lat: getLatFromURL(), lng: getLngFromURL() },
-          zoom: getZoomFromURL(),
-        });
-
-        infoWindow = new google.maps.InfoWindow();
-
-        try {
-          const response = await fetch(SHEET_API_URL);
-          const data = await response.json();
-
-          const markers = data.map((row) => {
-            const marker = new google.maps.Marker({
-              position: { lat: parseFloat(row.lat), lng: parseFloat(row.lng) },
-              title: row.address,
-            });
-
-            marker.addListener("click", () => {
-              infoWindow.setContent(`<strong>${row.address}</strong>`);
-              infoWindow.open(map, marker);
-            });
-
-            return marker;
-          });
-
-          new markerClusterer.MarkerClusterer({ map, markers });
-        } catch (err) {
-          console.error("Error fetching marker data:", err);
-        }
-
-        if (!isReadOnlyFromURL()) {
-          map.addListener("click", async (e) => {
-            if (userMarker) userMarker.setMap(null);
-
-            userMarker = new google.maps.AdvancedMarkerElement({
-              position: e.latLng,
-              map: map,
-              title: "Your Pin",
-            });
-
-            const address = prompt("Enter a description or address for this pin:");
-
-            if (address) {
-              try {
-                await fetch(SHEET_API_URL, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    address: address,
-                    lat: e.latLng.lat(),
-                    lng: e.latLng.lng(),
-                  }),
-                });
-              } catch (err) {
-                console.error("Error posting new marker:", err);
-              }
-            }
-          });
-        }
-      };
-    </script>
-
-    <!-- MarkerClusterer and Google Maps API -->
-    <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCVTKDaMKijXNaqf2PbL0USscRNCox2AfQ&callback=initMap&loading=async&libraries=marker" async></script>
-
+<head>
+    <title>Map with Pin & Address Retrieval</title>
     <style>
-      html,
-      body,
-      #map {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
+        #map {
+            height: 550px;
+            width: 100%;
+        }
     </style>
-  </head>
-
-  <body>
+</head>
+<body>
     <div id="map"></div>
-  </body>
+    <script>
+        var map;
+        var markers = [];
+        var webhookURL = 'https://hooks.zapier.com/hooks/catch/2177604/2f5w5ol/';
+
+        function getCoordinatesFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lat = parseFloat(urlParams.get("lat"));
+            const lng = parseFloat(urlParams.get("lng"));
+            return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : { lat: 45.423, lng: -75.700 };
+        }
+
+        function getEmailFromURL() {
+            return new URLSearchParams(window.location.search).get("userID");
+        }
+
+        function getZoomFromURL() {
+            const zoom = parseFloat(new URLSearchParams(window.location.search).get("zoom"));
+            return !isNaN(zoom) ? zoom : 14;
+        }
+
+        function getReadOnlyFromURL() {
+            return new URLSearchParams(window.location.search).get("readOnly") === "true";
+        }
+
+        function shouldShowPin() {
+            return new URLSearchParams(window.location.search).get("showPin") === "true";
+        }
+
+        function getPinLabelFromURL() {
+            return new URLSearchParams(window.location.search).get("pinlabel");
+        }
+
+        function initMap() {
+            var mapCenter = getCoordinatesFromURL();
+            var mapZoom = getZoomFromURL();
+            var isReadOnly = getReadOnlyFromURL();
+            var showPin = shouldShowPin();
+            var pinLabel = getPinLabelFromURL();
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: mapZoom,
+                center: mapCenter,
+                mapTypeId: 'hybrid',
+                streetViewControl: true,
+                mapTypeControl: true,
+                tilt: 0
+            });
+
+            loadPinsFromSheet(map);
+
+            if (showPin) {
+                if (pinLabel) {
+                    addMarkerWithoutPost(mapCenter, pinLabel, map, true);
+                } else {
+                    getAddressFromCoordinates(mapCenter, function (address) {
+                        addMarkerWithoutPost(mapCenter, address, map, true);
+                    });
+                }
+            }
+
+            map.addListener('click', function (event) {
+                addNewMarker(event.latLng, isReadOnly);
+            });
+        }
+
+        function addMarkerWithoutPost(location, label, map, openInfoWindow = false) {
+            var marker = new google.maps.Marker({
+                position: location,
+                map: map,
+                title: label || "" // If label is null, use an empty string
+            });
+
+            markers.push(marker);
+
+            marker.infowindow = new google.maps.InfoWindow({
+                content: `<strong>${label || "No Label"}</strong><br>Lat: ${location.lat}<br>Lng: ${location.lng}`
+            });
+
+            marker.addListener('click', function() {
+                markers.forEach(m => { if (m.infowindow) m.infowindow.close(); });
+                marker.infowindow.open(map, marker);
+            });
+
+            if (openInfoWindow) {
+                marker.infowindow.open(map, marker);
+            }
+        }
+
+        function addNewMarker(location, isReadOnly) {
+            clearMarkers();
+            var marker = new google.maps.Marker({ position: location, map: map });
+            markers.push(marker);
+
+            marker.infowindow = new google.maps.InfoWindow({ content: 'Fetching address...' });
+
+            getAddressFromCoordinates(location, function (address) {
+                var infoContent = `<strong>${address}</strong><br>Latitude: ${location.lat()}<br>Longitude: ${location.lng()}`;
+                marker.infowindow.setContent(infoContent);
+
+                marker.addListener('click', function() {
+                    markers.forEach(m => { if (m.infowindow) m.infowindow.close(); });
+                    marker.infowindow.open(map, marker);
+                });
+
+                if (!isReadOnly) {
+                    sendToWebhook(location.lat(), location.lng(), address);
+                }
+            });
+        }
+
+        function getAddressFromCoordinates(location, callback) {
+            var geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ location: location }, function (results, status) {
+                if (status === 'OK' && results[0]) {
+                    callback(results[0].formatted_address);
+                } else {
+                    callback("Unknown Address");
+                }
+            });
+        }
+
+        function loadPinsFromSheet(map) {
+            var sheetURL = "https://script.google.com/macros/s/AKfycbx87euepoIJU8AG62deU6j9GM330m5yY6VH5bP791cEKUUjc6D2v7ms2HfzawsfVKt_/exec";
+            fetch(sheetURL)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        data.forEach(function(pin) {
+                            const lat = Number(pin.lat);
+                            const lng = Number(pin.lng);
+
+                            if (isNaN(lat) || isNaN(lng)) {
+                                console.error("Invalid latitude or longitude:", pin);
+                                return;
+                            }
+
+                            addMarkerWithoutPost({ lat: lat, lng: lng }, pin.address || "", map);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching pins:', error);
+                });
+        }
+
+        function sendToWebhook(lat, lng, label) {
+            const email = getEmailFromURL();
+            const pageURL = window.location.href; // Get the full URL
+            let encodedLabel = encodeURIComponent(label);
+
+            fetch(webhookURL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    pinlabel: encodedLabel,
+                    lat: lat,
+                    lng: lng,
+                    email: email,
+                    url: pageURL // Include the URL in the webhook request
+                })
+            })
+            .catch(error => console.error("Error sending marker data:", error));
+        }
+
+        function clearMarkers() {
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArphrYz6SOfecninN0rVP5NS0unaArAlY&callback=initMap" async defer></script>
+</body>
 </html>

@@ -1,77 +1,93 @@
 <!DOCTYPE html>
 <html>
-  <head>
+<head>
     <title>Map with Glide Table Pins</title>
     <style>
-      #map {
-        height: 90vh;
-        width: 100%;
-      }
+        #map {
+            height: 550px;
+            width: 100%;
+        }
     </style>
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
-  </head>
-  <body>
-    <h2>Dynamic Map from Glide Table</h2>
+</head>
+<body>
     <div id="map"></div>
 
-    <script>
-      async function loadPinsFromGlide(map) {
-        try {
-          const response = await fetch("https://gapi.glideapp.io/api/function_call", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-glide-api-key": "4c8dde9f-896c-41fe-8fc2-7cf292e0cf61"
-            },
-            body: JSON.stringify({
-              appID: "AaC2jhlDbFkyHaGUQr24",
-              function: "table.getAllRows",
-              args: {
-                tableID: "native-table-fEIWIJDP168Lk1NKrizd"
-              }
-            })
-          });
+    <script type="module">
+        import * as glide from "https://cdn.skypack.dev/@glideapps/tables";
 
-          const pins = await response.json();
-
-          if (!Array.isArray(pins)) {
-            console.error("Unexpected response from Glide API:", pins);
-            return;
-          }
-
-          pins.forEach(pin => {
-            const lat = parseFloat(pin.Lat);
-            const lng = parseFloat(pin.Lng);
-            const address = pin.Address || pin.Name || "Unnamed location";
-
-            if (!isNaN(lat) && !isNaN(lng)) {
-              addMarker({ lat, lng }, address, map);
+        const addressesTable = glide.table({
+            token: "4c8dde9f-896c-41fe-8fc2-7cf292e0cf61",
+            app: "AaC2jhlDbFkyHaGUQr24",
+            table: "native-table-fEIWIJDP168Lk1NKrizd",
+            columns: {
+                id: { type: "row-id", name: "id" },
+                address: { type: "string", name: "Address" },
+                lat: { type: "number", name: "Lat" },
+                lng: { type: "number", name: "Lng" }
             }
-          });
-        } catch (error) {
-          console.error("Error loading pins from Glide:", error);
+        });
+
+        let map;
+        let markers = [];
+
+        function getCoordinatesFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lat = parseFloat(urlParams.get("lat"));
+            const lng = parseFloat(urlParams.get("lng"));
+            return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : { lat: 45.423, lng: -75.700 };
         }
-      }
 
-      function addMarker(position, title, map) {
-        new google.maps.Marker({
-          position,
-          map,
-          title
-        });
-      }
+        function initMap() {
+            const center = getCoordinatesFromURL();
+            const zoom = 14;
 
-      function initMap() {
-        const center = { lat: 45.4215, lng: -75.6972 }; // Default center: Ottawa
-        const map = new google.maps.Map(document.getElementById("map"), {
-          zoom: 12,
-          center
-        });
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: center,
+                zoom: zoom,
+                mapTypeId: "hybrid"
+            });
 
-        loadPinsFromGlide(map);
-      }
+            loadPinsFromGlideTable(map);
+        }
 
-      window.onload = initMap;
+        async function loadPinsFromGlideTable(map) {
+            try {
+                const rows = await addressesTable.get();
+                rows.forEach(row => {
+                    if (!row.lat || !row.lng) return;
+                    const lat = parseFloat(row.lat);
+                    const lng = parseFloat(row.lng);
+                    const label = row.address || "No Address";
+                    addMarker({ lat, lng }, label, map);
+                });
+            } catch (error) {
+                console.error("Failed to load from Glide Table:", error);
+            }
+        }
+
+        function addMarker(location, label, map) {
+            const marker = new google.maps.Marker({
+                position: location,
+                map: map,
+                title: label
+            });
+
+            const infowindow = new google.maps.InfoWindow({
+                content: `<strong>${label}</strong><br>Lat: ${location.lat}<br>Lng: ${location.lng}`
+            });
+
+            marker.addListener("click", function () {
+                markers.forEach(m => m.infowindow?.close());
+                infowindow.open(map, marker);
+            });
+
+            marker.infowindow = infowindow;
+            markers.push(marker);
+        }
+
+        window.initMap = initMap;
     </script>
-  </body>
+
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArphrYz6SOfecninN0rVP5NS0unaArAlY&callback=initMap"></script>
+</body>
 </html>
